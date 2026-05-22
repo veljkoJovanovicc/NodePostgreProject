@@ -14,12 +14,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH
+      - name: Debug SSH
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          echo "IP: ${{ secrets.SERVER_IP }}"
+          ping -c 1 ${{ secrets.SERVER_IP }} || true
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} || true
 
       # 2. Deploy to server
       - name: Deploy via SSH
