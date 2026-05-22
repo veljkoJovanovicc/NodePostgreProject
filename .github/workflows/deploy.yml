@@ -1,34 +1,16 @@
-name: CD Pipeline
+- name: Setup SSH
+  run: |
+    mkdir -p ~/.ssh
 
-on:
-  push:
-    branches:
-      - master
+    echo "Testing secrets..."
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+    echo "${{ secrets.SERVER_USER }}"
+    echo "${{ secrets.SERVER_IP }}"
 
-    steps:
+    echo "${{ secrets.SSH_PRIVATE_KEY }}" | wc -c
 
-      - name: Checkout code
-        uses: actions/checkout@v4
+    echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
 
-      # 1. Setup SSH
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+    chmod 600 ~/.ssh/id_rsa
 
-      # 2. Deploy to server
-      - name: Deploy via SSH
-        run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
-            cd ~/app || git clone https://github.com/veljkoJovanovicc/NodePostgreProject.git app &&
-            cd app &&
-            git pull &&
-            docker compose down || true &&
-            docker compose up -d --build
-          "
+    ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
