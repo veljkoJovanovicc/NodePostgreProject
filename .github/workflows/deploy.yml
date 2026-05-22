@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CD Pipeline
 
 on:
   push:
@@ -6,37 +6,29 @@ on:
       - master
 
 jobs:
-  docker-compose-test:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build containers
-        run: docker compose build
-
-      - name: Start containers
-        run: docker compose up -d
-
-      - name: Wait for API to be ready
+      # 1. Setup SSH
+      - name: Setup SSH
         run: |
-          echo "Waiting for backend to be ready..."
-          for i in {1..30}; do
-            if curl -s http://localhost:8080/users; then
-              echo "API is ready!"
-              exit 0
-            fi
-            echo "Not ready yet... retrying ($i/30)"
-            sleep 2
-          done
-          echo "API did not become ready in time"
-          docker compose logs
-          exit 1
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
 
-      - name: Test API endpoint (GET users)
-        run: curl http://localhost:8080/users
-
-      - name: Stop containers
-        if: always()
-        run: docker compose down
+      # 2. Deploy to server
+      - name: Deploy via SSH
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+            cd ~/app || git clone https://github.com/veljkoJovanovicc/NodePostgreProject.git app &&
+            cd app &&
+            git pull &&
+            docker compose down || true &&
+            docker compose up -d --build
+          "
